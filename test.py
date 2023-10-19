@@ -1,9 +1,6 @@
-import logging
+from med_logger import setting_logger
 
-logging.basicConfig(filename='logfile.txt', level=logging.DEBUG, format='%(asctime)s - %(message)s')
+logger = setting_logger('logfile.txt')
 
-logging.debug("This is a debug message")
-logging.info("This is an info message")
-logging.warning("This is a warning message")
-logging.error("This is an error message")
-logging.critical("This is a critical message")
+logger.info('안녕하세요')
+logger.debug('안녕하세요')

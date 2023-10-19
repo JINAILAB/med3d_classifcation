@@ -49,14 +49,17 @@ def train_one_epoch(model, criterion, epoch, optimizer, data_loader, device, log
         acc = acc_metric(preds, targets)
         f1 = f1_metric(preds, targets)
 
-    # train_acc.append(correct / total)
     acc = acc_metric.compute()
     f1 = f1_metric.compute()
 
-    print(f'Epoch {epoch:<4} ,train_Loss = {train_loss / total :<10}, train_acc = {acc:<10}, train_f1 = {f1:<10}')
+    logger.info(f'Epoch {epoch:<4} ,train_Loss = {train_loss / total :<10}, train_acc = {acc:<10}, train_f1 = {f1:<10}')
     
     acc_metric.reset()
     f1_metric.reset()
+    
+    
+
+    
     
     
     

@@ -113,7 +113,8 @@ def train_and_val(cfg, logger, main_folder):
         logger.debug(f'best {key} is {metrics[key]["value"]}')
         
 # 추론 코드 
-def inference(cfg, device, logger):
+def inference(cfg, logger):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = densenet_model.to(device)
     _, test_loader = load_test_data(cfg.img_dirs, val_transforms, cfg.batch_size)
     all_predictions = batch_inference(model, test_loader, device, logger, cfg.model_path)
@@ -139,6 +140,7 @@ def inference(cfg, device, logger):
 
     
 def ensemble(voting='hard'):
+    ## hard voting 구현
     if voting == 'hard':
         # CSV 파일 목록 가져오기
         csv_dir = os.path.join(cfg.work_dir, 'infer_csv')
@@ -189,7 +191,7 @@ if __name__ == '__main__':
     # logger 생성 장소 지정
     logger = setting_logger(os.path.join(main_folder, 'log', 'logfile.txt'))
     if args.inference:
-        inference()
+        inference(cfg, logger)
     else:
         train_and_val(cfg, logger, main_folder)
     

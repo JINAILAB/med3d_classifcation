@@ -7,13 +7,15 @@ import monai
 import argparse
 from med_model import densenet_model
 from med_logger import setting_logger
-from med_utils import set_seed, train_one_epoch, evaluate_one_epoch
-from med_dataset import load_data
+from med_utils import set_seed, train_one_epoch, evaluate_one_epoch, batch_inference
+from med_dataset import load_data, load_test_data
 from med_transforms import train_transforms, val_transforms
 from med_model import densenet_model
 from types import SimpleNamespace
 from torch import nn
 from datetime import datetime
+import pandas as pd
+from collections import Counter
 
 # seed 설정, device 설정
 set_seed()
@@ -110,10 +112,61 @@ def train_and_val(cfg, logger, main_folder):
     for key in metrics:
         logger.debug(f'best {key} is {metrics[key]["value"]}')
         
-# 추론 코드 추후 작성
-def inference(cfg):
-    pass
+# 추론 코드 
+def inference(cfg, device, logger):
+    model = densenet_model.to(device)
+    _, test_loader = load_test_data(cfg.img_dirs, val_transforms, cfg.batch_size)
+    all_predictions = batch_inference(model, test_loader, device, logger, cfg.model_path)
+
+    # 예측된 확률에서 가장 높은 값의 인덱스를 가져와서 그에 해당하는 클래스 이름을 얻습니다.
+    # 예시로, 클래스 이름을 'Type1', 'Type2', ... 라고 가정합니다.
+    # 클래스 이름이 다르다면 이 부분을 수정해주세요.
+    predicted_classes = [f"Type{pred.argmax() + 1}" for pred in all_predictions]
+
+    # ChallengeID 리스트 생성
+    challenge_ids = [f"HT_Subject_{i:03}" for i in range(121, 201)]
+
+    # DataFrame 생성
+    df = pd.DataFrame({
+        'ChallengeID': challenge_ids,
+        'Submit_HTType': predicted_classes
+    })
+
+    # CSV로 저장
+    current_time = datetime.now().strftime("%Y%m%d_%H%M_model")
+    os.makedirs(os.path.join(cfg.work_dir, 'infer_csv'), exist_ok=True)
+    df.to_csv(os.path.join(cfg.work_dir, 'infer_csv', 'predictions'+current_time+'.csv'), index=False)
+
+    
+def ensemble(voting='hard'):
+    if voting == 'hard':
+        # CSV 파일 목록 가져오기
+        csv_dir = os.path.join(cfg.work_dir, 'infer_csv')
+        csv_files = [os.path.join(csv_dir, f) for f in os.listdir(csv_dir) if f.endswith('.csv')]
+
+        # 각 CSV 파일에서 예측 결과를 가져오기
+        all_preds = []
+        for file in csv_files:
+            df = pd.read_csv(file)
+            all_preds.append(df['Submit_HTType'].tolist())
+
+        # 하드 보팅으로 앙상블
+        ensemble_preds = []
+        for i in range(len(all_preds[0])):  # 각 이미지에 대해
+            preds_for_image = [preds[i] for preds in all_preds]
+            most_common, _ = Counter(preds_for_image).most_common(1)[0]  # 가장 많이 예측된 클래스 찾기
+            ensemble_preds.append(most_common)
+
+        # 앙상블 결과를 CSV로 저장
+        ensemble_df = pd.DataFrame({
+            'ChallengeID': df['ChallengeID'],
+            'Submit_HTType': ensemble_preds
+        })
+
+        ensemble_df.to_csv(os.path.join(csv_dir, 'ensemble_predictions.csv'), index=False)
         
+    else:
+        pass
 
 if __name__ == '__main__':
     # args, yaml 파일 가져오기

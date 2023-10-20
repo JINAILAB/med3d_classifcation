@@ -9,6 +9,7 @@ from torchmetrics.classification import (
     BinaryConfusionMatrix,
     BinaryAUROC
 )
+from torch import nn
 
 
 
@@ -108,8 +109,21 @@ def evaluate_one_epoch(model, criterion, epoch, valid_loader, device, logger):
         auroc.reset()
         
     return acc, f1, c_matrix, auroc
-        
+
+def batch_inference(model, test_loader, device, logger, model_path):
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.eval()
     
+    all_predictions = []
+
+    with torch.no_grad():
+        for inputs in test_loader:
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            probs = nn.Softmax(dim=1)(outputs)
+            all_predictions.extend(probs.cpu().numpy())
+    
+    return all_predictions
     
     
     

@@ -7,8 +7,9 @@ import torch
 
 # load train_dataset, train_loader, valid_dataset, valid_loader
 def load_data(img_dirs, train_transforms, valid_transforms, batch_size, logger, test_size=0.3):
-    df = pd.read_csv('./')
-    img_dirs = sorted(glob.glob('/home/ncp/workspace/blockstorage/*/'))
+    df = pd.read_csv('/home/ncp/workspace/blockstorage/jyp/StudyHT_Open.csv')
+    # gre img_dirs sort
+    img_dirs = sorted(glob.glob('/home/ncp/workspace/nasr/pub66n1/topic1/ImageData/*/MNI_Space/gre_in_MNI_brain.nii.gz'))
     labels = list(df.loc[:119, 'GT_HTType'])
     print('labels' , len(labels))
     train_img_dirs = img_dirs[:120]

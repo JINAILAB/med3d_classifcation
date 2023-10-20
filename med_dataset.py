@@ -5,8 +5,8 @@ from glob import glob
 from sklearn.model_selection import train_test_split
 import torch
 
-
-def load_data(img_dirs, train_transforms, valid_transforms, batch_size, test_size=0.3):
+# load train_dataset, train_loader, valid_dataset, valid_loader
+def load_data(img_dirs, train_transforms, valid_transforms, batch_size, logger, test_size=0.3):
     df = pd.read_csv('./')
     img_dirs = sorted(glob.glob('/home/ncp/workspace/blockstorage/*/'))
     labels = list(df.loc[:119, 'GT_HTType'])
@@ -35,6 +35,8 @@ def load_test_data(img_dirs, test_transforms, batch_size):
     
     
     return test_dataset, test_dataloader
+
+
     
     
 

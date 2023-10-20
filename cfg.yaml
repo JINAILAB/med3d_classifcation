@@ -1,0 +1,13 @@
+img_dirs: /home/ncp/blockstorage
+label_smoothing: 0
+lr: 0.001
+lr_scheduler: cosineannelinglr
+lr_warmup_epochs: 3
+max_epochs: 5
+model: densenet_model
+opt: adamw
+train_crop_size: 96
+val_crop_size: 96
+val_resize_size: 108
+weight decay: 0.0001
+weight_decay: 0.0001

@@ -71,7 +71,7 @@ def train_one_epoch(model, criterion, epoch, optimizer, data_loader, device, log
     acc_metric.reset()
     f1_metric.reset()
     
-def evaluate_one_epoch(model, criterion, valid_loader, device, epoch, logger):
+def evaluate_one_epoch(model, criterion, epoch, valid_loader, device, logger):
     print('\n[ Test epoch: %d ]' % epoch)
     model.eval()
     valid_loss = 0

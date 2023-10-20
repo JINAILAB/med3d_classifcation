@@ -8,10 +8,11 @@ from monai.transforms import (
 
 train_transforms = Compose([ScaleIntensity(), 
                             EnsureChannelFirst(), 
-                            Resize((96, 96, 96)), 
-                            RandRotate90()])
+                            Resize((96, 96, 96)),
+                            ])
 
 
 val_transforms = Compose([ScaleIntensity(), 
                           EnsureChannelFirst(), 
-                          Resize((96, 96, 96))])
+                          Resize((96, 96, 96)),
+                          ])

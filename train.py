@@ -25,6 +25,7 @@ def get_args_parser(add_help=True):
 
     parser = argparse.ArgumentParser(description="PyTorch Classification Training", add_help=add_help)
     parser.add_argument('--infer', help='inference by the pretrained model', action='store_true')
+    parser.add_argument('--ensemble', help='inference by the pretrained model', action='store_true')
     
     return parser
 
@@ -122,7 +123,9 @@ def inference(cfg, logger):
     # 예측된 확률에서 가장 높은 값의 인덱스를 가져와서 그에 해당하는 클래스 이름을 얻습니다.
     # 예시로, 클래스 이름을 'Type1', 'Type2', ... 라고 가정합니다.
     # 클래스 이름이 다르다면 이 부분을 수정해주세요.
+    # 확률 추가
     predicted_classes = [f"Type{pred.argmax() + 1}" for pred in all_predictions]
+    predicted_probabilities = [float(pred.max()) for pred in all_predictions]
 
     # ChallengeID 리스트 생성
     challenge_ids = [f"HT_Subject_{i:03}" for i in range(121, 201)]
@@ -130,7 +133,8 @@ def inference(cfg, logger):
     # DataFrame 생성
     df = pd.DataFrame({
         'ChallengeID': challenge_ids,
-        'Submit_HTType': predicted_classes
+        'Submit_HTType': predicted_classes,
+        'Probability': predicted_probabilities
     })
 
     # CSV로 저장
@@ -162,13 +166,28 @@ def ensemble(voting='hard'):
         # 앙상블 결과를 CSV로 저장
         ensemble_df = pd.DataFrame({
             'ChallengeID': df['ChallengeID'],
-            'Submit_HTType': ensemble_preds
+            'Submit_HTType': ensemble_preds,
         })
 
         ensemble_df.to_csv(os.path.join(csv_dir, 'ensemble_predictions.csv'), index=False)
         
+    elif voting == 'soft':
+        all_probs = []
+        num_classes = None
+
+        # 각 CSV 파일에서 확률 값을 가져오기
+        for file in csv_files:
+            df = pd.read_csv(file)
+            probs = df['Probability'].tolist()
+            all_probs.append(probs)
+            if num_classes is None:
+                num_classes = len(df['Submit_HTType'].unique())
+
+        ensemble_probs = np.mean(all_probs, axis=0)
+        ensemble_preds = [f"Type{prob.argmax() + 1}" for prob in ensemble_probs]
+
     else:
-        pass
+        raise ValueError("Unknown voting type. Choose either 'hard' or 'soft'.")
 
 if __name__ == '__main__':
     # args, yaml 파일 가져오기

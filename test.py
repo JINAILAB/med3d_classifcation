@@ -17,7 +17,8 @@ cfg = {
     'img_dirs' : '/home/',
     'work_dir' : '/home/',
     'lr_warmup_decay' : 0.01,
-    'infererence_pretrain_dir' : '/home'
+    'infererence_pretrain_dir' : '/home',
+    'seed' : 66
 }
 with open("cfg.yaml", 'w') as outfile:
     yaml.dump(cfg, outfile)

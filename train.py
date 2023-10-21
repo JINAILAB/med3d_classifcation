@@ -17,8 +17,6 @@ from datetime import datetime
 import pandas as pd
 from collections import Counter
 
-# seed 설정, device 설정
-set_seed()
 
 # argparse 설정
 def get_args_parser(add_help=True):
@@ -26,6 +24,7 @@ def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description="PyTorch Classification Training", add_help=add_help)
     parser.add_argument('--infer', help='inference by the pretrained model', action='store_true')
     parser.add_argument('--ensemble', help='inference by the pretrained model', action='store_true')
+    parser.add_argument('--train_only_one_file', help='inference by the pretrained model', action='store_true')
     
     return parser
 
@@ -48,11 +47,11 @@ def get_args_parser(add_help=True):
 #     'work_dir' : '/home/',
 #     'lr_warmup_decay' : 0.01,
 #     'infererence_pretrain_dir' : '/home'
+#     'seed' : 66
 # }
 
-def train_and_val(cfg, logger, main_folder):
+def train_and_val(cfg, logger, main_folder, seed=66):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_savedir = os.path.join(main_folder, 'model')
     
     logger.debug('model is', cfg.model)
     model = densenet_model.to(device)
@@ -91,9 +90,9 @@ def train_and_val(cfg, logger, main_folder):
     
     # metrics 설정
     metrics = {
-        "acc": {"value": 0, "filename": "acc_best_model.pth"},
-        "f1": {"value": 0, "filename": "f1_best_model.pth"},
-        "auroc": {"value": 0, "filename": "auroc_best_model.pth"}
+        "acc": {"value": 0, "filename": "acc_best_model.pth", "confusion_matrix" : 0},
+        "f1": {"value": 0, "filename": "f1_best_model.pth", "confusion_matrix" : 0},
+        "auroc": {"value": 0, "filename": "auroc_best_model.pth", "confusion_matrix" : 0}
     }
 
     for epoch in range(cfg.epochs):
@@ -106,17 +105,20 @@ def train_and_val(cfg, logger, main_folder):
         for key in metrics:
             if metrics[key]["value"] < current_metrics[key]:
                 metrics[key]["value"] = current_metrics[key]
+                metrics[key]['confusion_matrix'] = c_matrix
                 save_path = os.path.join(main_folder, 'model', metrics[key]["filename"])
                 torch.save(model.state_dict(), save_path)
 
             
     for key in metrics:
         logger.debug(f'best {key} is {metrics[key]["value"]}')
+        logger.debug(f'best {key} confusion_matrix is \n {metrics[key]["confusion_matrix"]}')
         
 # 추론 코드 
 def inference(cfg, logger):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = densenet_model.to(device)
+    model.load_state_dict(torch.load(cfg.infererence_pretrain_dir))
     _, test_loader = load_test_data(cfg.img_dirs, val_transforms, cfg.batch_size)
     all_predictions = batch_inference(model, test_loader, device, logger, cfg.model_path)
 
@@ -140,10 +142,12 @@ def inference(cfg, logger):
     # CSV로 저장
     current_time = datetime.now().strftime("%Y%m%d_%H%M_model")
     os.makedirs(os.path.join(cfg.work_dir, 'infer_csv'), exist_ok=True)
-    df.to_csv(os.path.join(cfg.work_dir, 'infer_csv', 'predictions'+current_time+'.csv'), index=False)
+    df.to_csv(os.path.join(cfg.work_dir, 'infer_csv', 'predictions_'+cfg.seed+'_'+current_time+'.csv'), index=False)
+    
+
 
     
-def ensemble(voting='hard'):
+def ensemble_csv(voting='hard'):
     ## hard voting 구현
     if voting == 'hard':
         # CSV 파일 목록 가져오기
@@ -163,13 +167,6 @@ def ensemble(voting='hard'):
             most_common, _ = Counter(preds_for_image).most_common(1)[0]  # 가장 많이 예측된 클래스 찾기
             ensemble_preds.append(most_common)
 
-        # 앙상블 결과를 CSV로 저장
-        ensemble_df = pd.DataFrame({
-            'ChallengeID': df['ChallengeID'],
-            'Submit_HTType': ensemble_preds,
-        })
-
-        ensemble_df.to_csv(os.path.join(csv_dir, 'ensemble_predictions.csv'), index=False)
         
     elif voting == 'soft':
         all_probs = []
@@ -184,10 +181,18 @@ def ensemble(voting='hard'):
                 num_classes = len(df['Submit_HTType'].unique())
 
         ensemble_probs = np.mean(all_probs, axis=0)
-        ensemble_preds = [f"Type{prob.argmax() + 1}" for prob in ensemble_probs]
+        ensemble_preds = [prob.argmax() for prob in ensemble_probs]
 
     else:
         raise ValueError("Unknown voting type. Choose either 'hard' or 'soft'.")
+    
+    # 앙상블 결과를 CSV로 저장
+    ensemble_df = pd.DataFrame({
+        'ChallengeID': df['ChallengeID'],
+        'Submit_HTType': ensemble_preds,
+    })
+
+    ensemble_df.to_csv(os.path.join(csv_dir, 'ensemble_predictions.csv'), index=False)
 
 if __name__ == '__main__':
     # args, yaml 파일 가져오기
@@ -195,7 +200,8 @@ if __name__ == '__main__':
     with open("cfg.yaml", 'r') as stream:
         cfg = yaml.safe_load(stream)
         cfg = SimpleNamespace(**cfg)
-
+    # seed 설정
+    set_seed(cfg.seed)
     # 모델과 로그 저장 폴더 생성
     # 현재의 날짜와 시간을 "YYYYMMDD_HHMM_model" 형식으로 생성
     current_time = datetime.now().strftime("%Y%m%d_%H%M_model")
@@ -211,7 +217,11 @@ if __name__ == '__main__':
     logger = setting_logger(os.path.join(main_folder, 'log', 'logfile.txt'))
     if args.inference:
         inference(cfg, logger)
-    else:
+        
+    elif args.ensemble:
+        pass
+    
+    elif args.train_only_one_file:
         train_and_val(cfg, logger, main_folder)
     
     

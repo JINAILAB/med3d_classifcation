@@ -9,6 +9,7 @@ lr_warmup_epochs: 3
 max_epochs: 5
 model: densenet_model
 opt: adamw
+seed: 66
 train_crop_size: 96
 val_crop_size: 96
 val_resize_size: 108

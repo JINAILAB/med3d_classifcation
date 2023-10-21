@@ -50,7 +50,7 @@ def get_args_parser(add_help=True):
 #     'seed' : 66
 # }
 
-def train_and_val(cfg, logger, main_folder, seed=66):
+def train_and_val(cfg, logger, main_folder):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     logger.debug('model is', cfg.model)

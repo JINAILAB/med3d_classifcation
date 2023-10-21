@@ -47,9 +47,9 @@ def train_one_epoch(model, criterion, epoch, optimizer, data_loader, device, log
     for batch_idx, (inputs, targets) in enumerate(data_loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
-
-        preds = model(inputs)
-        loss = criterion(preds, targets)
+        with torch.cuda.amp.autocast(): # torch autocast
+            preds = model(inputs)
+            loss = criterion(preds, targets)
         loss.backward()
 
         optimizer.step()
@@ -89,7 +89,6 @@ def evaluate_one_epoch(model, criterion, epoch, valid_loader, device, logger):
             total += targets.size(0)
 
             preds = model(inputs)
-            
             valid_loss += criterion(preds, targets).item()
             
             

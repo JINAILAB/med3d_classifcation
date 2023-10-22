@@ -7,12 +7,11 @@ lr_scheduler: cosineannelinglr
 lr_warmup_decay: 0.01
 lr_warmup_epochs: 3
 max_epochs: 5
-model: densenet_model
+model: resnet18
 opt: adamw
 seed: 66
 train_crop_size: 96
 val_crop_size: 96
 val_resize_size: 108
 weight decay: 0.0001
-weight_decay: 0.0001
 work_dir: /home/

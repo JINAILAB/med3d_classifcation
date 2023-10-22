@@ -28,7 +28,6 @@ def load_data(img_dirs, train_transforms, valid_transforms, batch_size, logger, 
     
 
 def load_test_data(img_dirs, test_transforms, batch_size):
-    df = pd.read_csv('./')
     img_dirs = sorted(glob.glob('/home/ncp/workspace/blockstorage/*/'))
     test_img_dirs = img_dirs[120:]
     test_dataset = ImageDataset(image_files=test_img_dirs, transform=test_transforms)

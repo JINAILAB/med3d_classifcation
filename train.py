@@ -16,6 +16,7 @@ from torch import nn
 from datetime import datetime
 import pandas as pd
 from collections import Counter
+from med_model import MedModel
 
 
 # argparse 설정
@@ -54,7 +55,7 @@ def train_and_val(cfg, logger, main_folder):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     logger.debug('model is', cfg.model)
-    model = densenet_model.to(device)
+    model = getattr(MedModel, cfg.model).to(device)
     
     # loss 설정
     criterion = nn.CrossEntropyLoss(label_smoothing=cfg.label_smoothing)
@@ -117,7 +118,7 @@ def train_and_val(cfg, logger, main_folder):
 # 추론 코드 
 def inference(cfg, logger):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = densenet_model.to(device)
+    model = getattr(MedModel, cfg.model).to(device)
     model.load_state_dict(torch.load(cfg.infererence_pretrain_dir))
     _, test_loader = load_test_data(cfg.img_dirs, val_transforms, cfg.batch_size)
     all_predictions = batch_inference(model, test_loader, device, logger, cfg.model_path)
@@ -193,6 +194,8 @@ def ensemble_csv(voting='hard'):
     })
 
     ensemble_df.to_csv(os.path.join(csv_dir, 'ensemble_predictions.csv'), index=False)
+    
+
 
 if __name__ == '__main__':
     # args, yaml 파일 가져오기

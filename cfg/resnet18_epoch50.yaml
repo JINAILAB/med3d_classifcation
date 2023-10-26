@@ -14,4 +14,4 @@ train_crop_size: 96
 val_crop_size: 96
 val_resize_size: 108
 weight decay: 0.0001
-work_dir: /home/
+work_dir: ./

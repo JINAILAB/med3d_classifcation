@@ -43,13 +43,14 @@ def train_one_epoch(model, criterion, epoch, optimizer, data_loader, device, log
     
     acc_metric = BinaryAccuracy()
     f1_metric = BinaryF1Score()
+    #auroc = BinaryAUROC()
     
     for batch_idx, (inputs, targets) in enumerate(data_loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
-        with torch.cuda.amp.autocast(): # torch autocast
-            preds = model(inputs)
-            loss = criterion(preds, targets)
+        #with torch.cuda.amp.autocast(): # torch autocast
+        preds = model(inputs)
+        loss = criterion(preds, targets)
         loss.backward()
 
         optimizer.step()
@@ -58,17 +59,19 @@ def train_one_epoch(model, criterion, epoch, optimizer, data_loader, device, log
         total += targets.size(0) 
         # preds = preds.cpu()
         # targets = targets.cpu()
+  
+        preds = preds.softmax(dim=-1).argmax(dim=-1)
         
         acc = acc_metric(preds, targets)
         f1 = f1_metric(preds, targets)
-        auroc = auroc(preds, targets)
+        #auroc = auroc(preds, targets)
 
     acc = acc_metric.compute()
     f1 = f1_metric.compute()
-    auroc = auroc.compute()
+    #auroc = auroc.compute()
 
-    logger.debug(f'Epoch {epoch:<3} ,train_Loss = {train_loss / total :<8}, train_acc = {acc:<8}, train_f1 = {f1:<8}, train_auroc = {auroc:<8}')
-    
+    # logger.debug(f'Epoch {epoch:<3} ,train_Loss = {train_loss / total :<8}, train_acc = {acc:<8}, train_f1 = {f1:<8}, train_auroc = {auroc:<8}')
+    logger.debug(f'Epoch {epoch:<3} ,train_Loss = {train_loss / total :<8}, train_acc = {acc:<8}, train_f1 = {f1:<8}')
     acc_metric.reset()
     f1_metric.reset()
     
@@ -80,8 +83,8 @@ def evaluate_one_epoch(model, criterion, epoch, valid_loader, device, logger):
     
     acc_metric = BinaryAccuracy()
     f1_metric = BinaryF1Score()
-    confmat = confmat= BinaryConfusionMatrix()
-    auroc = BinaryAUROC(thresholds=None)
+    #confmat = confmat= BinaryConfusionMatrix()
+    #auroc = BinaryAUROC(thresholds=None)
     
     with torch.inference_mode():
         for batch_idx, (inputs, targets) in enumerate(valid_loader):
@@ -91,23 +94,25 @@ def evaluate_one_epoch(model, criterion, epoch, valid_loader, device, logger):
             preds = model(inputs)
             valid_loss += criterion(preds, targets).item()
             
-            
+            preds = preds.softmax(dim=-1).argmax(dim=-1)
             acc = acc_metric(preds, targets)
             f1 = f1_metric(preds, targets)
-            c_matrix = confmat(preds, targets)
-            auroc= auroc(preds, targets)
+            
+            
+            #c_matrix = confmat(preds, targets)
+            #auroc= auroc(preds, targets)
             
         acc = acc_metric.compute()
         f1 = f1_metric.compute()
-        auroc = auroc.compute()
-        logger.debug(f'Epoch {epoch:<3} ,valid_Loss = {valid_loss / total :<8}, valid_acc = {acc:<8}, valid_f1 = {f1:<8}, , valid_auroc = {auroc:<8}')
+        #auroc = auroc.compute()
+        logger.debug(f'Epoch {epoch:<3} ,valid_Loss = {valid_loss / total :<8}, valid_acc = {acc:<8}, valid_f1 = {f1:<8}')
             
         acc_metric.reset()
         f1_metric.reset()
-        confmat.reset()
-        auroc.reset()
+        #confmat.reset()
+        #auroc.reset()
         
-    return acc, f1, c_matrix, auroc
+    return acc, f1, 0, 0
 
 def batch_inference(model, test_loader, device, logger, model_path):
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -123,6 +128,8 @@ def batch_inference(model, test_loader, device, logger, model_path):
             all_predictions.extend(probs.cpu().numpy())
     
     return all_predictions
+    
+    
     
     
     

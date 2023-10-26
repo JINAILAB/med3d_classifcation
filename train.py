@@ -5,12 +5,10 @@ import numpy as np
 import os
 import monai
 import argparse
-from med_model import densenet_model
 from med_logger import setting_logger
 from med_utils import set_seed, train_one_epoch, evaluate_one_epoch, batch_inference
 from med_dataset import load_data, load_test_data
 from med_transforms import train_transforms, val_transforms
-from med_model import densenet_model
 from types import SimpleNamespace
 from torch import nn
 from datetime import datetime
@@ -23,9 +21,10 @@ from med_model import MedModel
 def get_args_parser(add_help=True):
 
     parser = argparse.ArgumentParser(description="PyTorch Classification Training", add_help=add_help)
-    parser.add_argument('--infer', help='inference by the pretrained model', action='store_true')
+    parser.add_argument('--yaml_pth', type=str, default='./cfg/resnet18_epoch50.yaml')
+    parser.add_argument('--inference', help='inference by the pretrained model', action='store_true')
     parser.add_argument('--ensemble', help='inference by the pretrained model', action='store_true')
-    parser.add_argument('--train_only_one_file', help='inference by the pretrained model', action='store_true')
+    parser.add_argument('-t','--train_only_one_file', help='inference by the pretrained model', action='store_true')
     
     return parser
 
@@ -54,8 +53,8 @@ def get_args_parser(add_help=True):
 def train_and_val(cfg, logger, main_folder):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    logger.debug('model is', cfg.model)
-    model = getattr(MedModel, cfg.model).to(device)
+    logger.info(f'model is {cfg.model}')
+    model = getattr(MedModel(), cfg.model).to(device)
     
     # loss 설정
     criterion = nn.CrossEntropyLoss(label_smoothing=cfg.label_smoothing)
@@ -200,7 +199,7 @@ def ensemble_csv(voting='hard'):
 if __name__ == '__main__':
     # args, yaml 파일 가져오기
     args = get_args_parser().parse_args()
-    with open("cfg.yaml", 'r') as stream:
+    with open(args.yaml_pth, 'r') as stream:
         cfg = yaml.safe_load(stream)
         cfg = SimpleNamespace(**cfg)
     # seed 설정
@@ -216,6 +215,9 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(main_folder, 'log'), exist_ok=True)
 
     print(f"'{main_folder}' 아래에 'model'과 'log' 폴더에 데이터가 저장됩니다.")
+    
+    with open(os.path.join(main_folder, 'log', 'cfg.yaml'), 'w') as f:
+        yaml.dump(cfg, f)
     # logger 생성 장소 지정
     logger = setting_logger(os.path.join(main_folder, 'log', 'logfile.txt'))
     if args.inference:
@@ -226,7 +228,6 @@ if __name__ == '__main__':
     
     elif args.train_only_one_file:
         train_and_val(cfg, logger, main_folder)
-    
     
     
     

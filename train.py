@@ -14,16 +14,13 @@ from torch import nn
 from datetime import datetime
 import pandas as pd
 from collections import Counter
-from med_model import MedModel
-
+import torchvision
 
 # argparse 설정
 def get_args_parser(add_help=True):
 
     parser = argparse.ArgumentParser(description="PyTorch Classification Training", add_help=add_help)
     parser.add_argument('--yaml_pth', type=str, default='./cfg/resnet18_epoch50.yaml')
-    parser.add_argument('--inference', help='inference by the pretrained model', action='store_true')
-    parser.add_argument('--ensemble', help='inference by the pretrained model', action='store_true')
     parser.add_argument('-t','--train_only_one_file', help='inference by the pretrained model', action='store_true')
     
     return parser
@@ -53,8 +50,9 @@ def get_args_parser(add_help=True):
 def train_and_val(cfg, logger, main_folder):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    logger.info(f'model is {cfg.model}')
-    model = getattr(MedModel(), cfg.model).to(device)
+    logger.info(f'model is {cfg.model}. Creating model with device {device}')
+    model = torchvision.models.get_model(cfg.model, weights=cfg.weights, num_classes=2)
+    model.to(device)
     
     # loss 설정
     criterion = nn.CrossEntropyLoss(label_smoothing=cfg.label_smoothing)
@@ -117,7 +115,7 @@ def train_and_val(cfg, logger, main_folder):
 # 추론 코드 
 def inference(cfg, logger):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = getattr(MedModel, cfg.model).to(device)
+    model = torchvision.models.get_model(cfg.model, weights=cfg.weights, num_classes=2)
     model.load_state_dict(torch.load(cfg.infererence_pretrain_dir))
     _, test_loader = load_test_data(cfg.img_dirs, val_transforms, cfg.batch_size)
     all_predictions = batch_inference(model, test_loader, device, logger, cfg.model_path)
